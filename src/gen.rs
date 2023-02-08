@@ -17,7 +17,7 @@ pub fn generate_wit<'a>(btf: &Btf<'a>) -> anyhow::Result<Vec<u8>> {
 
     for (idx, ty) in types.iter().enumerate() {
         match ty {
-            BtfType::Struct(_) | BtfType::Union(_) | BtfType::Enum(_) => write!(
+            BtfType::Struct(_) | BtfType::Union(_) | BtfType::Enum(_) | BtfType::Func(_) => write!(
                 out_buf,
                 "{}",
                 btf_util.generate_top_level_string(idx as u32, 4)?
