@@ -1,0 +1,9 @@
+default world host {
+    record S1 {
+           a: list<list<list<list<s32>>>>,
+           b: s32,
+         ptr: u64 /* pointer to <u64 /* pointer to <u64 /* pointer to <u64 /* pointer to <()> */> */> */> */,
+           c: float64,
+        funcptr: u64 /* pointer to <func ( : s32,: float64,: u64 /* pointer to <list<s32>> */)> */,
+    }
+}

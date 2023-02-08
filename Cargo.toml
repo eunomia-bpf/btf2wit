@@ -1,5 +1,5 @@
 [package]
-name = "btf-test"
+name = "btf2wit"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,8 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.68"
-# btf = "0.5.1"
 btfdump = "0.0.1"
+clap = { version = "4.1.4", features = ["derive"] }
 memmap = "0.7.0"
 object = "^0.11.0"
-# elf = "0.7.1"

@@ -1,52 +1,36 @@
-use std::io::Write;
+use std::io::{stdout, Write};
 
 use anyhow::anyhow;
-use btf::types::{Btf, BtfType};
+use btf::types::Btf;
+use clap::Parser;
+use gen::generate_wit;
 use object::ElfFile;
-fn main() -> anyhow::Result<()> {
-    let file = std::fs::read("source.bpf.o")?;
-    let elf: ElfFile = object::ElfFile::parse(&file[..]).map_err(|e| anyhow!("{}", e))?;
-    let btf = Btf::load(&elf).map_err(|e| anyhow!("{}", e))?;
-    let types = btf.types();
 
-    let mut out_file = std::fs::OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("out.h")
-        .map_err(|e| anyhow!("{}", e))?;
-    for ty in types {
-        if let BtfType::Struct(st) = ty {
-            writeln!(out_file, "struct {} {{", st.name)?;
-            for member in st.members.iter() {
-                let real_type = &types[member.type_id as usize];
-                if let BtfType::Array(array_info) = real_type {
-                    // array_info.
-                    let val_type = &types[array_info.val_type_id as usize];
-                    writeln!(
-                        out_file,
-                        "    {} {}[{}];",
-                        val_type.name(),
-                        member.name,
-                        array_info.nelems
-                    )?;
-                } else if let BtfType::Ptr(ptr_info) = real_type {
-                    let val_type = &types[ptr_info.type_id as usize];
-                    writeln!(
-                        out_file,
-                        "    {} *{};",
-                        if let BtfType::Void = val_type {
-                            "void"
-                        } else {
-                            val_type.name()
-                        },
-                        member.name
-                    )?;
-                } else {
-                    writeln!(out_file, "    {} {};", real_type.name(), member.name)?;
-                }
-            }
-            writeln!(out_file, "}};")?;
-        }
-    }
+pub mod btf_types;
+pub mod gen;
+#[cfg(test)]
+pub mod tests;
+#[derive(Parser, Debug)]
+#[command(author, version, about)]
+struct Args {
+    input_file: String,
+    #[arg(short, long, value_name = "OUT_FILE")]
+    output_file: Option<String>,
+}
+fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+    let input_file =
+        std::fs::read(args.input_file).map_err(|e| anyhow!("Failed to open input file: {}", e))?;
+    let elf: ElfFile = object::ElfFile::parse(&input_file[..])
+        .map_err(|e| anyhow!("Failed to parse input file as ELF: {}", e))?;
+    let btf = Btf::load(&elf).map_err(|e| anyhow!("Failed to read BTF section: {}", e))?;
+    let out_buf = generate_wit(&btf)?;
+    if let Some(out_file) = args.output_file {
+        std::fs::write(out_file, out_buf).map_err(|e| anyhow!("Failed to write output: {}", e))?;
+    } else {
+        stdout()
+            .write(&out_buf[..])
+            .map_err(|e| anyhow!("Failed to write standard out: {}", e))?;
+    };
     return Ok(());
 }
