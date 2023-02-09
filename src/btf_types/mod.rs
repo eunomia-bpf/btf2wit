@@ -1,3 +1,9 @@
+/* SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+ *
+ * Copyright (c) 2023, eunomia-bpf
+ * All rights reserved.
+ */
+
 use anyhow::anyhow;
 use btf::types::{Btf, BtfType};
 use std::collections::HashMap;
@@ -93,12 +99,26 @@ impl<'a> BtfUtils<'a> {
                 writeln!(ret, "}}")?;
             }
             BtfType::Typedef(typedef) => {
+                write_indent(&mut ret, indent);
                 writeln!(
                     ret,
                     "type {} = {}",
                     replace_underscores(typedef.name),
                     self.generate_string(typedef.type_id)?
                 )?;
+            }
+            BtfType::Func(func) => {
+                // Ignore anonymous functions
+                if !func.name.is_empty() {
+                    write_indent(&mut ret, indent);
+                    writeln!(
+                        ret,
+                        "import {}: {} /* linkage: {} */",
+                        func.name,
+                        self.generate_string(func.proto_type_id)?,
+                        func.kind
+                    )?;
+                }
             }
             tp => return Err(anyhow!("Unexpected top level type: {}", tp)),
         };
@@ -181,12 +201,16 @@ impl<'a> BtfUtils<'a> {
                 write!(ret, "/* restrict */{}", self.generate_string(v.type_id)?)?
             }
             BtfType::FuncProto(proto) => {
-                write!(ret, "func ( ")?;
+                write!(ret, "func (")?;
                 for (i, arg) in proto.params.iter().enumerate() {
                     write!(
                         ret,
-                        "{}: {}",
-                        replace_underscores(arg.name),
+                        "{} {}",
+                        if arg.name.is_empty() {
+                            "".to_string()
+                        } else {
+                            format!("{}:", replace_underscores(arg.name))
+                        },
                         self.generate_string(arg.type_id)?
                     )?;
                     if i != proto.params.len() - 1 {
