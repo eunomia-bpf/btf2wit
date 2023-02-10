@@ -5,7 +5,8 @@ EXAMPLES_WIT = $(foreach n,$(EXAMPLES),$(n).wit)
 # EXAMPLES_BINDGEN_DIR = $(foreach n,$(EXAMPLES), $(n)-output)
 
 $(EXAMPLES_WIT):%.wit : %.c
-	ecc $< 
+	gcc -g -c $< -o $(basename $@).bpf.o
+	pahole -J $(basename $@).bpf.o
 	cargo run -- $(basename $@).bpf.o -o $@
 
 $(EXAMPLES):% : %.wit
@@ -14,7 +15,7 @@ $(EXAMPLES):% : %.wit
 	cd $@ && \
 	wit-bindgen c ../$@.wit && \
 	wit-bindgen rust ../$@.wit
-	rm *.json
+	rm -rf *.json
 
 clean:
 	rm -rf *.json
