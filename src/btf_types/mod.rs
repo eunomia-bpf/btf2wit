@@ -78,7 +78,7 @@ impl<'a> BtfUtils<'a> {
                         ret,
                         "{:>4}: {},",
                         replace_underscores(member.name),
-                        self.generate_string(member.type_id)?
+                        self.generate_string(member.type_id, false)?
                     )?;
                     indent -= 4;
                 }
@@ -104,7 +104,7 @@ impl<'a> BtfUtils<'a> {
                     ret,
                     "type {} = {}",
                     replace_underscores(typedef.name),
-                    self.generate_string(typedef.type_id)?
+                    self.generate_string(typedef.type_id, false)?
                 )?;
             }
             BtfType::Func(func) => {
@@ -115,7 +115,7 @@ impl<'a> BtfUtils<'a> {
                         ret,
                         "import {}: {} /* linkage: {} */",
                         func.name,
-                        self.generate_string(func.proto_type_id)?,
+                        self.generate_string(func.proto_type_id, false)?,
                         func.kind
                     )?;
                 }
@@ -124,7 +124,7 @@ impl<'a> BtfUtils<'a> {
         };
         return Ok(ret);
     }
-    pub fn generate_string(&mut self, type_id: u32) -> anyhow::Result<String> {
+    pub fn generate_string(&mut self, type_id: u32, in_comment: bool) -> anyhow::Result<String> {
         if let Some(v) = self.name_cache.get(&type_id) {
             return Ok(v.clone());
         }
@@ -145,10 +145,7 @@ impl<'a> BtfUtils<'a> {
             BtfType::DeclTag(_) => return Err(anyhow!("DeclTag is not supported!")),
             BtfType::TypeTag(_) => return Err(anyhow!("TypeTag is not supported!")),
             BtfType::Typedef(typedef) => {
-                return Err(anyhow!(
-                    "Unexpected typedef {} at non-top level!",
-                    typedef.name
-                ));
+                write!(ret, "{}", typedef.name)?;
             }
             BtfType::Void => {
                 write!(ret, "()")?;
@@ -156,8 +153,10 @@ impl<'a> BtfUtils<'a> {
             BtfType::Ptr(ptr) => {
                 write!(
                     ret,
-                    "u64 /* pointer to <{}> */",
-                    self.generate_string(ptr.type_id)?
+                    "u64 {left_comment} pointer to <{to}> {right_comment}",
+                    to = self.generate_string(ptr.type_id, true)?,
+                    left_comment = if in_comment { "" } else { "/*" },
+                    right_comment = if in_comment { "" } else { "*/" }
                 )?;
                 // return Err(anyhow!("Pointers are not supported!"));
             }
@@ -187,19 +186,31 @@ impl<'a> BtfUtils<'a> {
                 for _ in 0..collapsed_arr.dim.len() {
                     write!(ret, "list<")?;
                 }
-                write!(ret, "{}", self.generate_string(collapsed_arr.val_type)?)?;
+                write!(
+                    ret,
+                    "{}",
+                    self.generate_string(collapsed_arr.val_type, in_comment)?
+                )?;
                 for _ in 0..collapsed_arr.dim.len() {
                     write!(ret, ">")?;
                 }
             }
 
-            BtfType::Volatile(v) => {
-                write!(ret, "/* volatile */{}", self.generate_string(v.type_id)?)?
-            }
-            BtfType::Const(v) => write!(ret, "/* const */{}", self.generate_string(v.type_id)?)?,
-            BtfType::Restrict(v) => {
-                write!(ret, "/* restrict */{}", self.generate_string(v.type_id)?)?
-            }
+            BtfType::Volatile(v) => write!(
+                ret,
+                "/* volatile */{}",
+                self.generate_string(v.type_id, in_comment)?
+            )?,
+            BtfType::Const(v) => write!(
+                ret,
+                "/* const */{}",
+                self.generate_string(v.type_id, in_comment)?
+            )?,
+            BtfType::Restrict(v) => write!(
+                ret,
+                "/* restrict */{}",
+                self.generate_string(v.type_id, in_comment)?
+            )?,
             BtfType::FuncProto(proto) => {
                 write!(ret, "func (")?;
                 for (i, arg) in proto.params.iter().enumerate() {
@@ -211,7 +222,7 @@ impl<'a> BtfUtils<'a> {
                         } else {
                             format!("{}:", replace_underscores(arg.name))
                         },
-                        self.generate_string(arg.type_id)?
+                        self.generate_string(arg.type_id, in_comment)?
                     )?;
                     if i != proto.params.len() - 1 {
                         write!(ret, ",")?;
@@ -219,7 +230,11 @@ impl<'a> BtfUtils<'a> {
                 }
                 write!(ret, ")")?;
                 if proto.res_type_id != 0 {
-                    write!(ret, " -> {}", self.generate_string(proto.res_type_id)?)?;
+                    write!(
+                        ret,
+                        " -> {}",
+                        self.generate_string(proto.res_type_id, in_comment)?
+                    )?;
                 }
             }
             BtfType::Float(float) => {
