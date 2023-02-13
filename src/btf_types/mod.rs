@@ -9,18 +9,32 @@ use btf::types::{Btf, BtfType};
 use std::collections::HashMap;
 use std::fmt::Write;
 
+#[derive(Debug, Clone)]
+pub struct GenerateArgs {
+    pointer_size: usize,
+}
+
+impl GenerateArgs {
+    pub fn pointer_size(self, new_size: usize) -> Self {
+        Self {
+            pointer_size: new_size,
+            ..self
+        }
+    }
+}
+
+impl Default for GenerateArgs {
+    fn default() -> Self {
+        Self { pointer_size: 64 }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct TypeAttribute {
     pub const_: bool,
     pub volatile: bool,
     pub restrict: bool,
 }
-// #[derive(Debug,Clone)]
-// pub struct Edge<'a>{
-//     to:u32,
-//     ty:&'a BtfType<'a>
-
-// }
 #[derive(Clone, Debug)]
 pub struct CollapsedArray {
     pub dim: Vec<u32>,
@@ -32,6 +46,7 @@ pub struct BtfUtils<'a> {
     lookup_cache: HashMap<u32, (u32, TypeAttribute)>,
     array_cache: HashMap<u32, CollapsedArray>,
     name_cache: HashMap<u32, String>,
+    args: GenerateArgs,
 }
 fn write_indent(str: &mut String, indent: usize) {
     for _ in 0..indent {
@@ -43,12 +58,13 @@ fn replace_underscores(s: impl Into<String>) -> String {
     return t.replace("_", "-");
 }
 impl<'a> BtfUtils<'a> {
-    pub fn new(btf: &'a Btf<'a>) -> Self {
+    pub fn new(btf: &'a Btf<'a>, args: GenerateArgs) -> Self {
         Self {
             btf,
             lookup_cache: Default::default(),
             array_cache: Default::default(),
             name_cache: Default::default(),
+            args,
         }
     }
     pub fn generate_top_level_string(
@@ -153,7 +169,8 @@ impl<'a> BtfUtils<'a> {
             BtfType::Ptr(ptr) => {
                 write!(
                     ret,
-                    "u64 {left_comment} pointer to <{to}> {right_comment}",
+                    "u{size} {left_comment} pointer to <{to}> {right_comment}",
+                    size = self.args.pointer_size.clone(),
                     to = self.generate_string(ptr.type_id, true)?,
                     left_comment = if in_comment { "" } else { "/*" },
                     right_comment = if in_comment { "" } else { "*/" }
