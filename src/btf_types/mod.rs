@@ -11,7 +11,8 @@ use std::fmt::Write;
 
 #[derive(Debug, Clone)]
 pub struct GenerateArgs {
-    pointer_size: usize,
+    pub pointer_size: usize,
+    pub world_name: String,
 }
 
 impl GenerateArgs {
@@ -21,11 +22,17 @@ impl GenerateArgs {
             ..self
         }
     }
+    pub fn world_name(self, world_name: impl Into<String>) -> Self {
+        Self {
+            world_name: world_name.into(),
+            ..self
+        }
+    }
 }
 
 impl Default for GenerateArgs {
     fn default() -> Self {
-        Self { pointer_size: 64 }
+        Self { pointer_size: 64, world_name: "host".to_string() }
     }
 }
 

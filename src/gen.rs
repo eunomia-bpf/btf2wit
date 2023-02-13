@@ -10,10 +10,10 @@ use std::io::Write;
 
 pub fn generate_wit<'a>(btf: &Btf<'a>, args: GenerateArgs) -> anyhow::Result<Vec<u8>> {
     let mut out_buf = Vec::<u8>::new();
-    let mut btf_util = BtfUtils::new(&btf, args);
+    let mut btf_util = BtfUtils::new(&btf, args.clone());
     let types = btf.types();
 
-    writeln!(out_buf, "default world host {{")?;
+    writeln!(out_buf, "default world {} {{", args.world_name)?;
 
     for (idx, ty) in types.iter().enumerate() {
         match ty {

@@ -37,6 +37,8 @@ struct Args {
     output_file: Option<String>,
     #[arg(short = 'p', long, value_parser = pointer_size_test, default_value_t = 32)]
     pointer_size: usize,
+    #[arg(short, long, default_value_t = String::from("host"), help = "Specify the default world name in the output wit file")]
+    world_name: String,
 }
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -47,7 +49,9 @@ fn main() -> anyhow::Result<()> {
     let btf = Btf::load(&elf).map_err(|e| anyhow!("Failed to read BTF section: {}", e))?;
     let out_buf = generate_wit(
         &btf,
-        GenerateArgs::default().pointer_size(args.pointer_size),
+        GenerateArgs::default()
+            .pointer_size(args.pointer_size)
+            .world_name(args.world_name),
     )?;
     if let Some(out_file) = args.output_file {
         std::fs::write(out_file, out_buf).map_err(|e| anyhow!("Failed to write output: {}", e))?;
