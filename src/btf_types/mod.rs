@@ -83,7 +83,7 @@ impl<'a> BtfUtils<'a> {
                 write_indent(&mut ret, indent);
                 writeln!(
                     ret,
-                    "{} {} {{",
+                    "{} %{} {{",
                     if st.is_struct { "record" } else { "union" },
                     replace_underscores(st.name)
                 )?;
@@ -92,7 +92,7 @@ impl<'a> BtfUtils<'a> {
                     write_indent(&mut ret, indent);
                     writeln!(
                         ret,
-                        "{:>4}: {},",
+                        "%{}: {},",
                         replace_underscores(member.name),
                         self.generate_string(member.type_id, false)?
                     )?;
@@ -104,11 +104,11 @@ impl<'a> BtfUtils<'a> {
             }
             BtfType::Enum(enum_) => {
                 write_indent(&mut ret, indent);
-                writeln!(ret, "enum {} {{", replace_underscores(enum_.name))?;
+                writeln!(ret, "enum %{} {{", replace_underscores(enum_.name))?;
                 for value in enum_.values.iter() {
                     indent += 4;
                     write_indent(&mut ret, indent);
-                    writeln!(ret, "{},", replace_underscores(value.name))?;
+                    writeln!(ret, "%{},", replace_underscores(value.name))?;
                     indent -= 4;
                 }
                 write_indent(&mut ret, indent);
@@ -118,7 +118,7 @@ impl<'a> BtfUtils<'a> {
                 write_indent(&mut ret, indent);
                 writeln!(
                     ret,
-                    "type {} = {}",
+                    "type %{} = {}",
                     replace_underscores(typedef.name),
                     self.generate_string(typedef.type_id, false)?
                 )?;
@@ -129,7 +129,7 @@ impl<'a> BtfUtils<'a> {
                     write_indent(&mut ret, indent);
                     writeln!(
                         ret,
-                        "import {}: {} /* linkage: {} */",
+                        "import %{}: {} /* linkage: {} */",
                         replace_underscores(func.name),
                         self.generate_string(func.proto_type_id, false)?,
                         func.kind
@@ -161,7 +161,7 @@ impl<'a> BtfUtils<'a> {
             BtfType::DeclTag(_) => return Err(anyhow!("DeclTag is not supported!")),
             BtfType::TypeTag(_) => return Err(anyhow!("TypeTag is not supported!")),
             BtfType::Typedef(typedef) => {
-                write!(ret, "{}", typedef.name)?;
+                write!(ret, "%{}", replace_underscores(typedef.name))?;
             }
             BtfType::Void => {
                 write!(ret, "()")?;
@@ -237,12 +237,12 @@ impl<'a> BtfUtils<'a> {
                         if arg.name.is_empty() {
                             "".to_string()
                         } else {
-                            format!("{}:", replace_underscores(arg.name))
+                            format!("%{}:", replace_underscores(arg.name))
                         },
                         self.generate_string(arg.type_id, in_comment)?
                     )?;
                     if i != proto.params.len() - 1 {
-                        write!(ret, ",")?;
+                        write!(ret, ", ")?;
                     }
                 }
                 write!(ret, ")")?;
@@ -268,10 +268,10 @@ impl<'a> BtfUtils<'a> {
                 }
             }
             BtfType::Struct(st) | BtfType::Union(st) => {
-                write!(ret, "{}", replace_underscores(st.name))?
+                write!(ret, "%{}", replace_underscores(st.name))?
             }
             BtfType::Enum(enum_) => {
-                write!(ret, "{}", replace_underscores(enum_.name))?;
+                write!(ret, "%{}", replace_underscores(enum_.name))?;
             }
         };
         self.name_cache.insert(type_id, ret.clone());
