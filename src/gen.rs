@@ -13,7 +13,7 @@ pub fn generate_wit<'a>(btf: &Btf<'a>, args: GenerateArgs) -> anyhow::Result<Vec
     let mut btf_util = BtfUtils::new(&btf, args.clone());
     let types = btf.types();
 
-    writeln!(out_buf, "default world {} {{", args.world_name)?;
+    writeln!(out_buf, "default world %{} {{", args.world_name)?;
 
     for (idx, ty) in types.iter().enumerate() {
         match ty {
