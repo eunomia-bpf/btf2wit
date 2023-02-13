@@ -130,7 +130,7 @@ impl<'a> BtfUtils<'a> {
                     writeln!(
                         ret,
                         "import {}: {} /* linkage: {} */",
-                        func.name,
+                        replace_underscores(func.name),
                         self.generate_string(func.proto_type_id, false)?,
                         func.kind
                     )?;

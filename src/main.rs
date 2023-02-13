@@ -17,13 +17,25 @@ pub mod btf_types;
 pub mod gen;
 #[cfg(test)]
 pub mod tests;
+
+fn pointer_size_test(s: &str) -> Result<usize, String> {
+    let size: usize = s.parse().map_err(|_| format!("`{}` isn't a integer", s))?;
+    match size {
+        s @ (32 | 64) => Ok(s),
+        s => Err(format!(
+            "Invalid pointer size: {} (only 32 or 64 are accepted)",
+            s
+        )),
+    }
+}
+
 #[derive(Parser, Debug)]
 #[command(author, version, about)]
 struct Args {
     input_file: String,
     #[arg(short, long, value_name = "OUT_FILE")]
     output_file: Option<String>,
-    #[arg(short = 'p', long, value_parser = ["32", "64"], default_value_t = 32)]
+    #[arg(short = 'p', long, value_parser = pointer_size_test, default_value_t = 32)]
     pointer_size: usize,
 }
 fn main() -> anyhow::Result<()> {
@@ -33,7 +45,10 @@ fn main() -> anyhow::Result<()> {
     let elf: ElfFile = object::ElfFile::parse(&input_file[..])
         .map_err(|e| anyhow!("Failed to parse input file as ELF: {}", e))?;
     let btf = Btf::load(&elf).map_err(|e| anyhow!("Failed to read BTF section: {}", e))?;
-    let out_buf = generate_wit(&btf,GenerateArgs::default().pointer_size(args.pointer_size))?;
+    let out_buf = generate_wit(
+        &btf,
+        GenerateArgs::default().pointer_size(args.pointer_size),
+    )?;
     if let Some(out_file) = args.output_file {
         std::fs::write(out_file, out_buf).map_err(|e| anyhow!("Failed to write output: {}", e))?;
     } else {
