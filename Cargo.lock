@@ -62,8 +62,9 @@ dependencies = [
 
 [[package]]
 name = "btfdump"
-version = "0.0.1"
-source = "git+https://github.com/anakryiko/btfdump?rev=d9587c38#d9587c38d18f2ca82f29ddd77ae5f9f3163319b1"
+version = "0.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4c50e435b40e1338b6d4269fd711dd7593a69b1b38568574e868a1eb8d44ba9"
 dependencies = [
  "bitflags",
  "clap 2.34.0",
